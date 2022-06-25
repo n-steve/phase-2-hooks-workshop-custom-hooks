@@ -2,25 +2,59 @@ import styled from "styled-components";
 import React, { useEffect, useState } from "react";
 
 /* ✅ modify this usePokemon custom hook to take in a query as an argument */
-export function usePokemon() {
+export function usePokemon(query) {
+  const [{ data, status, errors }, setPokemon] = useState({
+    data: null,
+    status: "idle",
+    error: null,
+  });
+  useEffect(() => {
+    setPokemon(pokemons => ({ ...pokemons, errors: null, status: "pending" }));
+    fetch(`https://pokeapi.co/api/v2/pokemon/${query}`)
+      .then(r => {
+        if (r.ok) return r.json();
+        else {
+          return r.text().then(error => {
+            throw error;
+          });
+        }
+      })
+      .then(data => {
+        setPokemon({ data, status: "fulfiled", errors: null });
+      })
+      .catch(error => {
+        setPokemon({ data: null, status: "rejected", errors: [error] });
+      });
+  }, [query]);
+
+  return { data, status, errors };
+
   /* ✅ this hook should only return one thing: an object with the pokemon data */
 }
 
 function Pokemon({ query }) {
+  const { data: pokemon, status, errors } = usePokemon(query);
+
   /* 
    ✅ move the code from the useState and useEffect hooks into the usePokemon hook
    then, call the usePokemon hook to access the pokemon data in this component
-  */
-  const [pokemon, setPokemon] = useState(null);
-  useEffect(() => {
-    fetch(`https://pokeapi.co/api/v2/pokemon/${query}`)
-      .then(r => r.json())
-      .then(setPokemon);
-  }, [query]);
+  // */
+  // const [pokemon, setPokemon] = useState(null);
 
   // 🚫 don't worry about the code below here, you shouldn't have to touch it
-  if (!pokemon) return <h3>Loading...</h3>;
-
+  if (status === "idle" || status === "pending") {
+    return <h3>Loading...</h3>;
+  }
+  if (status === "rejected") {
+    return (
+      <div>
+        <h3>Error</h3>
+        {errors.map(e => (
+          <p key={e}>{e}</p>
+        ))}
+      </div>
+    );
+  }
   return (
     <div>
       <h3>{pokemon.name}</h3>
